@@ -1,0 +1,16 @@
+#+title: flymake-zig
+
+
+An Emacs flymake handler for syntax-checking assemlby source code using =zig=.
+* Usage:
+
+[[https://github.com/quelpa/quelpa-use-package][GitHub - quelpa/quelpa-use-package: Emacs quelpa handler for use-package]] setup:
+#+begin_src elisp
+  (use-package flymake-zig
+    :quelpa (flymake-zig :fetcher github :repo "juergenhoetzel/flymake-zig")
+    :init (add-hook 'zig-mode-hook (lambda ()
+				    (flymake-zig-setup)
+				    (flymake-mode 1))))
+#+end_src
+
+#+RESULTS:
