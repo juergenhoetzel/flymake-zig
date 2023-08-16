@@ -47,7 +47,8 @@
     (when (process-live-p flymake-zig--proc)
       (kill-process flymake-zig--proc)
       (setq flymake-zig--proc nil))
-    (unless (buffer-modified-p (current-buffer))
+    (if (buffer-modified-p (current-buffer))
+	(funcall report-fn nil)
       (setq flymake-zig--proc
 	    (make-process
              :name "flymake-zig" :noquery t :connection-type 'pipe
