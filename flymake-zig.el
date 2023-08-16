@@ -45,7 +45,8 @@
 	diagnostics)
     (unless zig-exec (error "%s not found on PATH" flymake-zig-executable))
     (when (process-live-p flymake-zig--proc)
-      (kill-process flymake-zig--proc))
+      (kill-process flymake-zig--proc)
+      (setq flymake-zig--proc nil))
     (unless (buffer-modified-p (current-buffer))
       (setq flymake-zig--proc
 	    (make-process
