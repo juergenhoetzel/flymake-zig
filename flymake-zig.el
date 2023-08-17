@@ -35,18 +35,18 @@
   :group 'flymake-zig)
 
 
-(defvar-local flymake-zig--proc nil
-  "A buffer-local variable handling the aspell process for flymake.")
+(defvar-local flymake-zig--id 0
+  "A buffer-local variable storing a unique id for flymake to prevent duplicate reports.")
 
 (defun flymake-zig-diagnostics (report-fn &rest _args)
   (let ((zig-exec (executable-find flymake-zig-executable))
 	(process-connection-type nil)
 	(source-buffer (current-buffer))
+	(current-id (setq flymake-zig--id (1+ flymake-zig--id)))
 	diagnostics)
     (unless zig-exec (error "%s not found on PATH" flymake-zig-executable))
     (when (process-live-p flymake-zig--proc)
-      (kill-process flymake-zig--proc)
-      (setq flymake-zig--proc nil))
+      (kill-process flymake-zig--proc))
     (if (buffer-modified-p (current-buffer))
 	(funcall report-fn nil)
       (setq flymake-zig--proc
@@ -60,7 +60,7 @@
 			       (with-current-buffer (process-buffer proc)
 				 (save-excursion
 				   (goto-char (point-min))
-				   (while (search-forward-regexp "^.+:\\([0-9]+\\):\\([0-9]+\\): \\(.+\\): \\(.+\\)$" nil t)
+				   (while (search-forward-regexp "^.+:\\([0-9]+\\):\\([0-9]+\\): \\(.+?\\): \\(.+\\)$" nil t)
 				     (let* ((lnum (string-to-number (match-string 1)))
 					    (col (string-to-number (match-string 2)))
 					    (severity (match-string 3))
@@ -73,7 +73,8 @@
 				       (setq diagnostics
 					     (nconc diagnostics (list (flymake-make-diagnostic (buffer-file-name source-buffer) `(,lnum . ,col) nil type msg))))))))))
 			 (kill-buffer (process-buffer proc))
-			 (funcall report-fn diagnostics)))))))
+			 (when (= current-id flymake-zig--id)  ;don't sent obsolete reports
+			   (funcall report-fn diagnostics))))))))
 
 ;;;###autoload
 (defun flymake-zig-setup ()
