@@ -4,6 +4,7 @@
 
 ;; Author: Jürgen Hötzel <juergen@hoetzel.info>
 ;; Keywords: tools, languages
+;; Package-Version: 20230817.173336
 ;; Package-Requires: ((emacs "26.1"))
 ;; Version: 1.0.0
 
@@ -45,36 +46,33 @@
 	(current-id (setq flymake-zig--id (1+ flymake-zig--id)))
 	diagnostics)
     (unless zig-exec (error "%s not found on PATH" flymake-zig-executable))
-    (when (process-live-p flymake-zig--proc)
-      (kill-process flymake-zig--proc))
     (if (buffer-modified-p (current-buffer))
 	(funcall report-fn nil)
-      (setq flymake-zig--proc
-	    (make-process
-             :name "flymake-zig" :noquery t :connection-type 'pipe
-             :buffer (generate-new-buffer " *flymake-zig*")
-             :command `(,flymake-zig-executable "build")
-             :sentinel (lambda (proc _event)
-			 (when (eq 'exit (process-status proc))
-			   (unwind-protect
-			       (with-current-buffer (process-buffer proc)
-				 (save-excursion
-				   (goto-char (point-min))
-				   (while (search-forward-regexp "^.+:\\([0-9]+\\):\\([0-9]+\\): \\(.+?\\): \\(.+\\)$" nil t)
-				     (let* ((lnum (string-to-number (match-string 1)))
-					    (col (string-to-number (match-string 2)))
-					    (severity (match-string 3))
-					    (msg (match-string 4))
-					    (type (cond
-						   ((string= severity "error") :error)
-						   ((string= severity "warning") :warning)
-						   (t :note))))
-				       ;; FIXME: Check for current file name
-				       (setq diagnostics
-					     (nconc diagnostics (list (flymake-make-diagnostic (buffer-file-name source-buffer) `(,lnum . ,col) nil type msg))))))))))
-			 (kill-buffer (process-buffer proc))
-			 (when (= current-id flymake-zig--id)  ;don't sent obsolete reports
-			   (funcall report-fn diagnostics))))))))
+      (make-process
+       :name "flymake-zig" :noquery t :connection-type 'pipe
+       :buffer (generate-new-buffer " *flymake-zig*")
+       :command `(,flymake-zig-executable "build")
+       :sentinel (lambda (proc _event)
+		   (when (eq 'exit (process-status proc))
+		     (unwind-protect
+			 (with-current-buffer (process-buffer proc)
+			   (save-excursion
+			     (goto-char (point-min))
+			     (while (search-forward-regexp "^.+:\\([0-9]+\\):\\([0-9]+\\): \\(.+?\\): \\(.+\\)$" nil t)
+			       (let* ((lnum (string-to-number (match-string 1)))
+				      (col (string-to-number (match-string 2)))
+				      (severity (match-string 3))
+				      (msg (match-string 4))
+				      (type (cond
+					     ((string= severity "error") :error)
+					     ((string= severity "warning") :warning)
+					     (t :note))))
+				 ;; FIXME: Check for current file name
+				 (setq diagnostics
+				       (nconc diagnostics (list (flymake-make-diagnostic (buffer-file-name source-buffer) `(,lnum . ,col) nil type msg))))))))))
+		   (kill-buffer (process-buffer proc))
+		   (when (= current-id flymake-zig--id)  ;don't sent obsolete reports
+		     (funcall report-fn diagnostics)))))))
 
 ;;;###autoload
 (defun flymake-zig-setup ()
