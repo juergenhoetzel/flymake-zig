@@ -4,7 +4,6 @@
 
 ;; Author: Jürgen Hötzel <juergen@hoetzel.info>
 ;; Keywords: tools, languages
-;; Package-Version: 20230817.173336
 ;; Package-Requires: ((emacs "26.1"))
 ;; Version: 1.0.0
 
@@ -58,18 +57,21 @@
 			 (with-current-buffer (process-buffer proc)
 			   (save-excursion
 			     (goto-char (point-min))
-			     (while (search-forward-regexp "^.+:\\([0-9]+\\):\\([0-9]+\\): \\(.+?\\): \\(.+\\)$" nil t)
-			       (let* ((lnum (string-to-number (match-string 1)))
-				      (col (string-to-number (match-string 2)))
-				      (severity (match-string 3))
-				      (msg (match-string 4))
+			     (while (search-forward-regexp "^\\(.+\\):\\([0-9]+\\):\\([0-9]+\\): \\(.+?\\): \\(.+\\)$" nil t)
+			       (let* ((file (expand-file-name (match-string 1)))
+				      (lnum (string-to-number (match-string 2)))
+				      (col (string-to-number (match-string 3)))
+				      (severity (match-string 4))
+				      (msg (match-string 5))
 				      (type (cond
 					     ((string= severity "error") :error)
 					     ((string= severity "warning") :warning)
 					     (t :note))))
-				 ;; FIXME: Check for current file name
-				 (setq diagnostics
-				       (nconc diagnostics (list (flymake-make-diagnostic (buffer-file-name source-buffer) `(,lnum . ,col) nil type msg))))))))))
+				 (if (equal (buffer-file-name source-buffer) file)
+				     (setq diagnostics
+					   (nconc diagnostics (list (flymake-make-diagnostic (buffer-file-name source-buffer) `(,lnum . ,col) nil type msg))))
+				   (flymake-log :warning "Error in different file: %s, Source: %s, Line: %d, Col: %d, type: %s, message: %s" (buffer-file-name source-buffer)
+						file lnum col type msg))))))))
 		   (kill-buffer (process-buffer proc))
 		   (when (= current-id flymake-zig--id)  ;don't sent obsolete reports
 		     (funcall report-fn diagnostics)))))))
